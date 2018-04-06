@@ -1,28 +1,32 @@
 import sys
+
+from botflow.context import Context
+
 sys.path.append("..")
 
-from botflow.command.command_str import CommandStr
+from botflow.matchers import equals
 from botflow.response import Response
 from botflow.engine_console import ConsoleEngine
 
 
-def do_validate(msg: str, params):
-    if params['result'] == msg:
-        return Response("correct")
+def do_validate(msg: str, context: Context):
+    if context.get('result') == msg:
+        return Response("correct"), context
     else:
-        return Response("incorrect")
+        return Response("incorrect"), context
 
 
-def do_quiz(msg: str):
-    return Response("2 + 2 = ?", do_validate, {"result": "4"})
+def do_quiz(msg: str, context: Context):
+    context.set("result", "4")
+    return Response("2 + 2 = ?", do_validate), context
 
 
-def do_exit(msg: str):
+def do_exit(msg: str, context: Context):
     exit()
 
 
 engine = ConsoleEngine()
-engine.add_command(CommandStr("quiz", do_quiz))
-engine.add_command(CommandStr("exit", do_exit))
+engine.add_command(equals("quiz"), do_quiz)
+engine.add_command(equals("exit"), do_exit)
 engine.run()
 

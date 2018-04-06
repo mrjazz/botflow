@@ -96,7 +96,8 @@ class ResponseRemoveKeyboard(Response):
 
 class ResponseKeyboard(ResponseRemoveKeyboard):
 
-    def isPositive(msg):
+    @staticmethod
+    def is_positive(msg: str):
         return msg.lower() in ['yes', 'y']
 
     def markup(self):

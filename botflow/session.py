@@ -1,6 +1,8 @@
-from typing import Callable, Sequence, Dict
 import logging
+from typing import Callable, Dict
 from botflow.response import Response
+from botflow.context import Context
+
 
 log = logging.getLogger(__name__)
 
@@ -9,24 +11,23 @@ class Session:
 
     def __init__(self):
         self.__handler = None
-        self.__params = {}
+        self.__context = Context()
 
     def process(self, commands: Dict[str, Callable], msg: str) -> Response:
         log.debug("request: %s" % msg)
         if self.__handler is not None:
-            response = self.__handler(msg, self.__params)
-            _, self.__handler, self.__params = response.extract()
+            response, self.__context = self.__handler(msg, self.__context)
+            _, self.__handler = response.extract()
+            return response
         else:
             self.__handler = None
-            self.__params = {}
-            for command in commands:
-                response = command.execute(msg)
-                if response is not None:
-                    _, self.__handler, self.__params = response.extract()
-                    break
-        if response is None:
-            return Response("unknown command")
-        return response
+            for matcher, command in commands.items():
+                if matcher(msg):
+                    response, self.__context = command(msg, self.__context)
+                    if response is not None:
+                        _, self.__handler = response.extract()
+                    return response
+        return Response("unknown command")
 
 
 if __name__ == '__main__':

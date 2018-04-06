@@ -1,10 +1,14 @@
-from botflow.command.interface import Command
+from typing import Callable
 
 
 class Engine:
 
     def __init__(self):
-        self._commands = []
+        self._commands = {}
 
-    def add_command(self, command: Command):
-        self._commands.append(command)
+    def add_command(self, matcher: Callable, action: Callable):
+        self._commands.setdefault(matcher, action)
+
+
+if __name__ == '__main__':
+    pass

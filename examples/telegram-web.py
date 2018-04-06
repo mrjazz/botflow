@@ -1,7 +1,7 @@
 import logging
 
 from botflow.engine_telegram import TelegramWebEngine, ResponseKeyboard, ResponseRemoveKeyboard
-from botflow.command.command_str import CommandStr
+from botflow.matchers import equals
 
 
 def do_validate(msg: str, params):
@@ -12,7 +12,7 @@ def do_validate(msg: str, params):
 
 
 def do_repeat(msg: str, params):
-    if ResponseKeyboard.isPositive(msg.lower()):
+    if ResponseKeyboard.is_positive(msg.lower()):
         return do_quiz('')
     else:
         return ResponseRemoveKeyboard('Bye!')
@@ -25,5 +25,5 @@ def do_quiz(msg: str):
 logging.basicConfig(level=logging.INFO)
 
 engine = TelegramWebEngine()
-engine.add_command(CommandStr("quiz", do_quiz))
+engine.add_command(equals("quiz"), do_quiz)
 engine.run("", "https://77d32070.ngrok.io/")
