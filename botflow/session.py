@@ -65,7 +65,7 @@ class ResponseMessage(Response):
 
 class Command:
 
-    HELP_DEFAULT = "have no details about this command"
+    HELP_DEFAULT = ""
 
     def __init__(self, controller: object, method: str):        
         command = getattr(controller, method)
@@ -235,4 +235,5 @@ class Session:
 
     def __help(self) -> ResponseMessage:
         commands = self.__controllers[-1].commands()
-        return ResponseMessage("\n".join(["%s - %s" % (command.name(), command.help()) for command in commands]))
+        return ResponseMessage("\n".join(["%s - %s" % (command.name(), command.help())
+                                          for command in commands if command.help() is not '']))

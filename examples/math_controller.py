@@ -16,6 +16,9 @@ class MathController:
         self.__result = 0
     
     def hello(self):
+        """
+        @help greetings command
+        """
         return "Hi!"
     
     def delay(self):
@@ -32,26 +35,12 @@ class MathController:
     
     def quiz(self):
         """
-        @help this is quiz help
+        @help quiz command
         """
         a = random.randint(1, 9)
         b = random.randint(1, 9)
         self.__result = str(a + b)
         return ResponseMessage("%d+%d=?" % (a, b), response_action=self.validate)
-
-    def test(self):
-        # return ReplyKeyboardMarkup([['Yes', 'No']], one_time_keyboard=True)
-        return ResponseKeyboard("correct, one more time?", self.do_repeat)
-
-    def items(self):
-        button_list = [[InlineKeyboardButton("col%s" % i, callback_data="col%s" % i)] for i in range(10)]
-        reply_markup = InlineKeyboardMarkup(button_list)
-        buttons = ResponseButtons("message")
-        buttons.set_markup(reply_markup)
-        return buttons
-
-    def col1(self):
-        print("col1!")
 
     def do_repeat(self, params: str):
         if ResponseKeyboard.is_positive(params.lower()):
@@ -59,10 +48,10 @@ class MathController:
         else:
             return 'Sorry..'
 
-    def do_exit(self):
+    def terminate(self):
         """
         @match exit
-        @help terminate bot
+        @help terminate bot (will work as `exit`)
         """
         logging.info("Terminating bot...")
         exit()

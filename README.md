@@ -6,6 +6,12 @@ For now supported only Telegram and Console as conversational gateways.
 
 ## An example of Bot code
 
+Here is how conversation looks like:
+
+<img src="https://raw.githubusercontent.com/mrjazz/botflow/master/examples/example.png"/>
+
+Here is the code for this bot:
+
 ```python
 class MathController:
 
@@ -13,6 +19,9 @@ class MathController:
         self.__result = 0
     
     def hello(self):
+        """
+        @help greetings command
+        """
         return "Hi!"
     
     def delay(self):
@@ -29,7 +38,7 @@ class MathController:
     
     def quiz(self):
         """
-        @help this is quiz help
+        @help quiz command
         """
         a = random.randint(1, 9)
         b = random.randint(1, 9)
@@ -42,7 +51,7 @@ class MathController:
         else:
             return 'Sorry..'
 
-    def do_exit(self):
+    def terminate(self):
         """
         @match exit
         @help terminate bot
