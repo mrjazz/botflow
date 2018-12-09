@@ -1,29 +1,23 @@
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,parentdir) 
+
 import logging
+from typing import Dict
 
 from botflow.engine_telegram import TelegramWebEngine, ResponseKeyboard, ResponseRemoveKeyboard
-from botflow.matchers import equals
-
-
-def do_validate(msg: str, params):
-    if params['result'] == msg:
-        return ResponseKeyboard("correct, one more time?", do_repeat)
-    else:
-        return ResponseKeyboard("incorrect, one more time?", do_repeat)
-
-
-def do_repeat(msg: str, params):
-    if ResponseKeyboard.is_positive(msg.lower()):
-        return do_quiz('')
-    else:
-        return ResponseRemoveKeyboard('Bye!')
-
-
-def do_quiz(msg: str):	
-    return ResponseRemoveKeyboard("2 + 2 = ?", do_validate, {"result": "4"})
+from examples.math_controller import MathController
 
 
 logging.basicConfig(level=logging.INFO)
 
-engine = TelegramWebEngine()
-engine.add_command(equals("quiz"), do_quiz)
-engine.run("", "https://77d32070.ngrok.io/")
+
+TOKEN = os.environ.get('TOKEN')
+URL = os.environ.get('URL')
+HOST = '0.0.0.0'
+PORT = '5000'
+
+engine = TelegramWebEngine(MathController())
+engine.run(TOKEN, URL, HOST, PORT)
+# engine.run(os.environ.get('TOKEN'), os.environ.get('URL'), os.environ.get('HOST'), os.environ.get('PORT'))

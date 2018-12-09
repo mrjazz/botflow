@@ -1,0 +1,11 @@
+{
+    "python.unitTest.unittestArgs": [
+        "-v",
+        "-s",
+        ".",
+        "-p",
+        "test_*.py"
+    ],
+    "python.unitTest.unittestEnabled": true,
+    "python.pythonPath": "c:\\Anaconda3\\python.exe"
+}

@@ -1,12 +1,15 @@
-# botflow
+import logging
 
-BotFlow is simple framework for building conversational interfaces.
+import time
+import random
 
-For now supported only Telegram and Console as conversational gateways.
+from typing import Dict
 
-## An example of Bot code
+from botflow.engine_telegram import ResponseKeyboard, ResponseButtons
+from botflow.session import ResponseMessage, ResponseAsync
+from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
-```python
+
 class MathController:
 
     def __init__(self):
@@ -36,6 +39,20 @@ class MathController:
         self.__result = str(a + b)
         return ResponseMessage("%d+%d=?" % (a, b), response_action=self.validate)
 
+    def test(self):
+        # return ReplyKeyboardMarkup([['Yes', 'No']], one_time_keyboard=True)
+        return ResponseKeyboard("correct, one more time?", self.do_repeat)
+
+    def items(self):
+        button_list = [[InlineKeyboardButton("col%s" % i, callback_data="col%s" % i)] for i in range(10)]
+        reply_markup = InlineKeyboardMarkup(button_list)
+        buttons = ResponseButtons("message")
+        buttons.set_markup(reply_markup)
+        return buttons
+
+    def col1(self):
+        print("col1!")
+
     def do_repeat(self, params: str):
         if ResponseKeyboard.is_positive(params.lower()):
             return 'We are do it again!'
@@ -49,4 +66,3 @@ class MathController:
         """
         logging.info("Terminating bot...")
         exit()
-``` 

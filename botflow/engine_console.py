@@ -1,19 +1,25 @@
-from typing import Callable, Mapping
-from botflow.session import Session
-from botflow.engine import Engine
+from botflow.engine_telegram import ResponseButtons
+from botflow.session import Session, Response
 
 
-class ConsoleEngine(Engine):
+class ConsoleEngine:
 
-    def __init__(self):
-        Engine.__init__(self)
-        self.__session = Session()
+    def __init__(self, controller):
+        self.__session = Session(controller, lambda msg: print(msg))
 
     def run(self):
         print("Welcome!")
         while True:
-            print(self.__session.process(self._commands, input()).msg())
+            request = input()
+            self.process(request)
 
+    def process(self, request):
+        response = self.__session.process(request)
+        if isinstance(response, ResponseButtons):
+            for i in response.markup().inline_keyboard:
+                print("[%s]" % i[0].text)
+        if issubclass(response.__class__, Response):
+            print(response.msg())
+        else:
+            print("Unknown request: {}".format(request))
 
-if __name__ == '__main__':
-    pass

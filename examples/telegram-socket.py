@@ -1,28 +1,10 @@
-from botflow.matchers import equals
-from botflow.engine_telegram import TelegramSocketEngine, ResponseKeyboard, ResponseRemoveKeyboard
 import logging
+import os
 
-
-def do_validate(msg: str, params):
-    if params['result'] == msg:
-        return ResponseKeyboard("correct, one more time?", do_repeat)
-    else:
-        return ResponseKeyboard("incorrect, one more time?", do_repeat)
-
-
-def do_repeat(msg: str, params):
-    if ResponseKeyboard.is_positive(msg.lower()):
-        return do_quiz('')
-    else:
-        return ResponseRemoveKeyboard('Bye!')
-
-
-def do_quiz(msg: str):
-    return ResponseRemoveKeyboard("2 + 2 = ?", do_validate, {"result": "4"})
-
+from botflow.engine_telegram import TelegramSocketEngine
+from examples.math_controller import MathController
 
 logging.basicConfig(level=logging.INFO)
 
-engine = TelegramSocketEngine()
-engine.add_command(equals("quiz"), do_quiz)
-engine.run("")
+engine = TelegramSocketEngine(MathController())
+engine.run(os.environ.get('TOKEN'))
