@@ -23,8 +23,6 @@ class TelegramEngine:
         self.before_process = None
 
     def _process_message(self, message):
-        # print(message)
-
         if self.before_process is not None:
             message = self.before_process(self, message)
 

@@ -6,7 +6,7 @@ import random
 from typing import Dict
 
 from botflow.engine_telegram import ResponseKeyboard, ResponseButtons
-from botflow.session import ResponseMessage, ResponseAsync
+from botflow.session import ResponseMessage, ResponseAsync, ResponseMessageWithBtns, MessageBtn
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
 
@@ -22,6 +22,9 @@ class MathController:
         return "Hi!"
     
     def delay(self):
+        """
+        @help async response
+        """
         return ResponseAsync("Started...", lambda: time.sleep(3), done_action=lambda: "Done!")
     
     def validate(self, msg: str):
@@ -32,6 +35,17 @@ class MathController:
         else:
             response = "incorrect"
         return ResponseAsync(response, lambda: time.sleep(1), done_action=self.quiz)
+
+    def btns(self, msg: str):
+        return ResponseMessageWithBtns('There are some options')\
+            .add_option(MessageBtn('One', value='btn1', name='test'))\
+            .add_option(MessageBtn('Two', value='btn2', name='test'))
+
+    def btn1(self, msg: str):
+        return 'btn1'
+
+    def btn2(self, msg: str):
+        return 'btn2'
     
     def quiz(self):
         """

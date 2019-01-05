@@ -63,6 +63,40 @@ class ResponseMessage(Response):
     pass
 
 
+class MessageBtn:
+
+    def __init__(self, label, type='button', name=None, value=None):
+        self.__label = label
+        self.__type = type
+        if name is None:
+            self.__name = label
+        else:
+            self.__name = name
+
+        if value is None:
+            self.__value = label
+        else:
+            self.__value = value
+
+    def dump(self):
+        return {'text': self.__label, 'value': self.__value, 'type': self.__type, 'name': self.__name}
+
+
+class ResponseMessageWithBtns(Response):
+
+    def __init__(self, msg, response_action: Callable=None):
+        super().__init__(msg, response_action=response_action)
+        self.__btns = []
+        self.__msg = msg
+
+    def add_option(self, btn: MessageBtn):
+        self.__btns.append(btn)
+        return self
+
+    def dump(self):
+        return [{'fallback': self.__msg, 'attachment_type': 'default', 'callback_id': 'test', 'actions': [btn.dump() for btn in self.__btns]}]
+
+
 class Command:
 
     HELP_DEFAULT = ""
