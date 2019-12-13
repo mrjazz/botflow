@@ -6,7 +6,6 @@ from threading import Thread
 from typing import Dict, Callable
 
 import botflow.matches as matches
-from telegram import ReplyMarkup
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +43,12 @@ class ResponseAsync(Response):
         log.info("Start task: '%s'" % self.__task)        
         if self.__task is None:
             raise Exception("Task is not defined but executed")
-        self.__task()
+        result = self.__task()
         if self.__done_action is not None:
-            return self.__done_action()
+            if result is None:
+                return self.__done_action()
+            else:
+                return self.__done_action(result)
 
 
 class ResponseController(Response):
@@ -118,7 +120,7 @@ class Command:
             for line in metadata.split("\n"):
                 res = p.match(line.strip())
                 if res:
-                    if res.groups(0)[0] == 'match':
+                    if res.groups(0)[0] in 'match':
                         self.__matcher = matches.equals(res.groups(0)[1])
                     elif res.groups(0)[0] == 'regexp':
                         self.__matcher = matches.regexp(res.groups(0)[1])
@@ -163,16 +165,16 @@ class ControllerExecutor:
             if method[:1] != '_':
                 self.__commands.append(Command(controller, method))
         
-    def __get_command(self, msg: str) -> Command:        
+    def __get_command(self, msg) -> Command:
         for command in self.__commands:
-            if command.match(msg):
+            if command.match(str(msg)):
                 return command
         return None
 
     def commands(self):
         return self.__commands
 
-    def execute(self, msg: str):
+    def execute(self, msg: str, chat_id: str):
         command = self.__get_command(msg)
         if command is None:
             return None  # command is not found
@@ -190,9 +192,13 @@ class ControllerExecutor:
             if arg == 'msg':
                 if arg_type is not str:
                     raise Exception('Wrong arg_type for arg %s in %s' % (arg, command.name()))
-                args.setdefault(arg, msg)
+                args.setdefault(arg, str(msg))
             elif arg == 'params':
-                args.setdefault(arg, command.match_params(msg))
+                args.setdefault(arg, command.match_params(str(msg)))
+            elif arg == 'context':
+                args.setdefault(arg, msg)
+            elif arg == 'chat_id':
+                args.setdefault(arg, chat_id)
             elif arg == 'return':
                 if arg_type not in [str, Response, ResponseTerminateSession, ResponseController, ResponseMessage]:
                     raise Exception('Wrong return type "%s" in %s' % (arg_type, command.name()))
@@ -200,8 +206,8 @@ class ControllerExecutor:
                 raise Exception('Unknown arg %s in %s' % (arg, command.name()))
         return command.execute(args)
 
-    def execute_method(self, method: Callable, msg: str):
-        return method(msg)
+    def execute_method(self, method: Callable, msg: str, chat_id: str):
+        return method(msg, chat_id)
 
 
 class Session:
@@ -217,18 +223,18 @@ class Session:
     def __get_response_action(self) -> Callable:        
         return self.__response_action
 
-    def process(self, msg: str) -> Response:        
+    def process(self, msg: str, chat_id: str) -> Response:
         response = None            
 
         response_action = self.__get_response_action()        
         if response_action is not None:
-            response = self.__controllers[-1].execute_method(response_action, msg)
+            response = self.__controllers[-1].execute_method(response_action, msg, chat_id)
             self.__set_response_action(None)        
 
         if response is None:
-            response = self.__controllers[-1].execute(msg)
+            response = self.__controllers[-1].execute(msg, chat_id)
 
-        if msg in ["help", "/help"]:
+        if str(msg) in ["help", "/help"]:
             response = self.__help()            
 
         if response is None:
@@ -238,7 +244,7 @@ class Session:
         return self.__process_response(response)
 
     def __process_response(self, response: Response):                
-        if isinstance(response, str) or isinstance(response, ReplyMarkup):
+        if isinstance(response, str):  # TODO : remove telegram dependency here or isinstance(response, ReplyMarkup):
             return ResponseMessage(response)
         elif response.response_action() is not None:            
             self.__set_response_action(response.response_action())
@@ -269,5 +275,5 @@ class Session:
 
     def __help(self) -> ResponseMessage:
         commands = self.__controllers[-1].commands()
-        return ResponseMessage("\n".join(["%s - %s" % (command.name(), command.help())
+        return ResponseMessage("\n".join(["/%s - %s" % (command.name(), command.help())
                                           for command in commands if command.help() is not '']))

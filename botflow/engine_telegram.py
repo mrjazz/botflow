@@ -2,15 +2,51 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from collections import Callable
-
 from time import sleep
 
 import telegram
 from botflow.session import Session, Response
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Message, Update
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.error import NetworkError, Unauthorized
 from telegram.ext import Updater, MessageHandler, Filters, CallbackQueryHandler
+
+
+class TelegramMessage:
+
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __str__(self):
+        if isinstance(self._msg, Update) and self._msg.callback_query:
+            return self._msg.callback_query.data
+        return self._msg.message.text
+
+    def get_user_id(self):
+        if isinstance(self._msg, Update) and self._msg.callback_query:
+            return self._msg.callback_query.from_user.id
+        return self._msg.message.from_user.id
+
+    def get_chat_id(self):
+        if isinstance(self._msg, Update) and self._msg.callback_query:
+            return self._msg.callback_query.message.chat.id
+        return self._msg.message['chat']['id']
+
+    def reply_text(self, *args, **kwargs):
+        if isinstance(self._msg, Update):
+            self._msg.effective_message.reply_text(*args, **kwargs)
+        else:
+            self._msg.message.reply_text(*args, **kwargs)
+
+    def edit_text(self, *args, **kwargs):
+        if isinstance(self._msg, Update):
+            self._msg.effective_message.edit_text(*args, **kwargs)
+        else:
+            self._msg.message.edit_text(*args, **kwargs)
+
+    def is_editable(self):
+        if isinstance(self._msg, Update):
+            return self._msg.callback_query is not None
+        return False
 
 
 class TelegramEngine:
@@ -22,29 +58,19 @@ class TelegramEngine:
         self._sender = None
         self.before_process = None
 
-    def _process_message(self, message):
+    def _process_message(self, message: TelegramMessage):
+        logging.info("Q> %s" % message)
+
         if self.before_process is not None:
             message = self.before_process(self, message)
 
-        if isinstance(message, Message):
-            logging.info("Q> %s" % message.text)
-            user_id = message.from_user.id
-        elif isinstance(message, Update):
-            logging.info("C> %s" % message.callback_query.data)
-            user_id = message.callback_query.from_user.id
-        else:
-            raise Exception("Unknown response type %s" % type(message))
+        user_id = message.get_user_id()
 
         if self.__session.get(user_id) is None:
-            fn_send = lambda msg: self.send_message(message['chat']['id'], msg)
+            fn_send = lambda msg: self.send_message(message.get_chat_id(), msg)
             self.__session.setdefault(user_id, Session(self.__controller, fn_send))
 
-        if isinstance(message, Message):
-            response = self.__session[user_id].process(message.text)
-        elif isinstance(message, Update):
-            response = self.__session[user_id].process(message.callback_query.data)
-        else:
-            raise Exception("Unknown response type %s" % type(message))
+        response = self.__session[user_id].process(message, message.get_chat_id())
 
         response_msg = response.msg()
         logging.info("A> %s" % response_msg)
@@ -54,12 +80,23 @@ class TelegramEngine:
 
         if isinstance(response, ResponseRemoveKeyboard):
             if isinstance(message, Update):
-                self._sender(message.callback_query.message.chat_id, response_msg, reply_markup=response.markup(), parse_mode=telegram.ParseMode.MARKDOWN)
+                self._sender(
+                    message.callback_query.message.chat_id, response_msg,
+                    reply_markup=response.markup(), parse_mode=telegram.ParseMode.MARKDOWN)
             else:
-                message.reply_text(response_msg, reply_markup=response.markup(), parse_mode=telegram.ParseMode.MARKDOWN)
+                if isinstance(response, InlineResponseButtons) and message.is_editable():
+                    message.edit_text(response_msg,
+                                       reply_markup=response.markup(),
+                                       parse_mode=telegram.ParseMode.MARKDOWN)
+                else:
+                    message.reply_text(response_msg,
+                                       reply_markup=response.markup(),
+                                       parse_mode=telegram.ParseMode.MARKDOWN)
         else:
             if isinstance(message, Update):
                 self.send_message(message.callback_query.message.chat_id, response_msg)
+            elif isinstance(message._msg, Update) and message._msg.callback_query:  # TODO : rewrite this workaround
+                self.send_message(message._msg.callback_query.message.chat_id, response_msg)
             else:
                 message.reply_text(response_msg, parse_mode=telegram.ParseMode.MARKDOWN)
 
@@ -111,12 +148,15 @@ class TelegramWebEngine(TelegramEngine):
     def run(self, token, url, host, port):
         updater = Updater(token)
         dp = updater.dispatcher
-        dp.add_handler(MessageHandler(Filters.all, lambda bot, update: self._process_message(update.message)))
-        dp.add_handler(CallbackQueryHandler(lambda bot, update: self._process_message(update)))
+        dp.add_handler(MessageHandler(Filters.all, lambda bot, update: self._process_message(TelegramMessage(update))))
+        dp.add_handler(CallbackQueryHandler(lambda bot, update: self._process_message(TelegramMessage(update))))
 
         dp.add_error_handler(self._error)
 
         self._sender = updater.bot.send_message
+
+        # updater.bot.delete_webhook()
+        # exit()
 
         updater.bot.set_webhook(url + '/' + token)
         updater.start_webhook(listen=host, port=int(port), url_path=token)
@@ -126,7 +166,7 @@ class TelegramWebEngine(TelegramEngine):
     def send_message(self, chat_id: int, msg: str):
         if self._sender is None:
             raise Exception("Sender doesn't exists")
-        self._sender(chat_id, str(msg))
+        self._sender(chat_id, str(msg), parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 class ResponseRemoveKeyboard(Response):
@@ -152,3 +192,8 @@ class ResponseButtons(ResponseRemoveKeyboard):
 
     def markup(self):
         return self.__markup
+
+
+class InlineResponseButtons(ResponseButtons):
+
+    pass
